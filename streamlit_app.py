@@ -578,35 +578,53 @@ def show_bracket_generator_page(players, team_of, team_colors, clean_rows):
 
 
 def show_character_info_page():
-    st.title("📚 Smash Bros. Character Info & Comparison")
+    st.title("📚 Smash Bros. Character Info & Comparison (2 Max)")
     st.markdown("---")
     
-    # Use multi-select to allow comparison
-    char_selections = st.multiselect(
-        "Select up to 4 Characters to Compare", 
-        options=SMASH_CHARACTERS, 
-        default=["Mario", "Link"],
-        max_selections=4
-    )
+    # Use two separate selectboxes for comparison
+    col_select1, col_select2 = st.columns(2)
+
+    with col_select1:
+        char_selection1 = st.selectbox(
+            "Character 1", 
+            options=SMASH_CHARACTERS, 
+            key="char_select_1",
+            index=SMASH_CHARACTERS.index("Mario") if "Mario" in SMASH_CHARACTERS else 0
+        )
+    
+    with col_select2:
+        # Filter options to prevent selecting the same character in both slots
+        filtered_options = [c for c in SMASH_CHARACTERS if c != char_selection1]
+        
+        # Determine the default index for Character 2
+        default_index = 0
+        if "Link" in filtered_options:
+            default_index = filtered_options.index("Link")
+        elif len(filtered_options) > 0:
+            default_index = 0
+            
+        char_selection2 = st.selectbox(
+            "Character 2", 
+            options=filtered_options, 
+            key="char_select_2",
+            index=default_index
+        )
     
     st.divider()
 
-    if not char_selections:
-        st.info("Please select at least one character to view stats.")
-        return
-
+    # Create the list of selected characters (guaranteed to be 2)
+    char_selections = [char_selection1, char_selection2]
+    
     # Prepare data for comparison
     stats_data = {}
     for char in char_selections:
         stats_data[char] = get_char_data(char)
     
     # Reformat data into a single DataFrame for easy side-by-side comparison
-    # Keys are stats (row headers), values are lists of character values (columns)
     comparison_data = {}
     
-    # We use the keys from the get_char_data function for consistent rows
-    # Use a dummy character or the first selected character to get the row structure
-    example_char_data = get_char_data(char_selections[0] if char_selections else "Mario")
+    # Use the keys from the get_char_data function for consistent rows
+    example_char_data = get_char_data(char_selections[0])
     
     for stat_name in example_char_data.keys():
         comparison_data[stat_name] = [stats_data[char].get(stat_name, "N/A") for char in char_selections]
