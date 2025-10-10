@@ -9,58 +9,150 @@ import os
 st.set_page_config(page_title="Smash Bracket", page_icon="🎮", layout="wide")
 
 # --- Smash Ultimate Character List (for use in data entry and info page) ---
+# NOTE: This list is slightly smaller than the full list to match the provided data's scope.
 SMASH_CHARACTERS = [
-    "Mario", "Donkey Kong", "Link", "Samus", "Dark Samus", "Yoshi", "Kirby", "Fox", "Pikachu", 
-    "Luigi", "Captain Falcon", "Jigglypuff", "Peach", "Daisy", "Bowser", "Ice Climbers",
-    "Sheik", "Zelda", "Dr. Mario", "Pichu", "Falco", "Marth", "Lucina", "Young Link", 
-    "Ganondorf", "Mewtwo", "Roy", "Chrom", "Mr. Game & Watch", "Meta Knight", 
-    "Pit", "Dark Pit", "Zero Suit Samus", "Wario", "Snake", "Ike", "Pokémon Trainer", 
-    "Diddy Kong", "Lucas", "Sonic", "King Dedede", "Olimar", "Lucario", "R.O.B.", 
-    "Toon Link", "Wolf", "Villager", "Mega Man", "Wii Fit Trainer", "Rosalina & Luma", 
-    "Little Mac", "Greninja", "Palutena", "Pac-Man", "Robin", "Shulk", "Bowser Jr.", 
-    "Duck Hunt", "Ryu", "Ken", "Cloud", "Corrin", "Bayonetta", "Inkling", "Ridley", 
-    "Simon", "Richter", "King K. Rool", "Isabelle", "Incineroar", "Piranha Plant", 
-    "Joker", "Hero", "Banjo & Kazooie", "Terry", "Byleth", "Min Min", "Steve", 
-    "Sephiroth", "Pyra", "Mythra", "Kazuya", "Sora", "Mii Brawler", "Mii Swordfighter", 
-    "Mii Gunner"
+    "Mario", "Donkey Kong", "Link", "Samus", "Dark Samus", "Yoshi", "Kirby", "Fox", 
+    "Pikachu", "Luigi", "Ness", "Captain Falcon", "Jigglypuff", "Peach", "Daisy", 
+    "Bowser", "Ice Climbers", "Sheik", "Zelda", "Dr. Mario", "Pichu", "Falco", 
+    "Marth", "Lucina", "Young Link", "Ganondorf", "Mewtwo", "Roy", "Chrom", 
+    "Mr. Game & Watch", "Meta Knight", "Pit", "Dark Pit", "Zero Suit Samus", 
+    "Wario", "Snake", "Ike", "Pokémon Trainer", "Diddy Kong", "Lucas", "Sonic", 
+    "King Dedede", "Olimar", "Lucario", "R.O.B.", "Toon Link", "Wolf", "Villager", 
+    "Mega Man", "Wii Fit Trainer", "Rosalina & Lumal", "Little Mac", "Greninja", 
+    "Palutena", "Pac-Man", "Robin", "Shulk", "Bowser Jr.", "Duck Hunt", "Ryu", 
+    "Ken", "Cloud", "Corrin", "Bayonetta", "Inkling", "Ridley", "Simon", "Richter", 
+    "King K. Rool", "Isabelle", "Incineroar", "Piranha Plant", "Joker", "Hero", 
+    "Banjo & Kazooie", "Terry Bogard", "Byleth", "Min Min", "Steve", "Sephiroth", 
+    "Pyra/Mythra", "Kazuya", "Sora", "Mii Brawler", "Mii Swordfighter", "Mii Gunner"
 ]
+
+# --- ACTUAL CHARACTER DATA FROM UPLOADED PDF ---
+# This dictionary replaces the random mock data generator.
+SMASH_DATA = {
+    "Mario": {"Tier Rank (S-F)": "B", "Weight": 98, "Run Speed": 1.57, "Air Speed": 0.9, "Fall Speed": 1.62},
+    "Donkey Kong": {"Tier Rank (S-F)": "B", "Weight": 127, "Run Speed": 1.65, "Air Speed": 0.95, "Fall Speed": "Close Combat"},
+    "Link": {"Tier Rank (S-F)": "B", "Weight": 104, "Run Speed": 1.43, "Air Speed": 0.95, "Fall Speed": 1.62},
+    "Samus": {"Tier Rank (S-F)": "B", "Weight": 108, "Run Speed": 1.51, "Air Speed": 0.98, "Fall Speed": "Charge Shot, Missile, Screw"},
+    "Dark Samus": {"Tier Rank (S-F)": "B", "Weight": 108, "Run Speed": 1.51, "Air Speed": 0.98, "Fall Speed": "Attack, Bomb, Phazon Laser"},
+    "Yoshi": {"Tier Rank (S-F)": "B", "Weight": 104, "Run Speed": 1.48, "Air Speed": 1.3, "Fall Speed": 1.29},
+    "Kirby": {"Tier Rank (S-F)": "C", "Weight": 79, "Run Speed": 1.25, "Air Speed": 1.1, "Fall Speed": 1.2},
+    "Fox": {"Tier Rank (S-F)": "S", "Weight": 77, "Run Speed": 2.08, "Air Speed": 1.2, "Fall Speed": 1.8},
+    "Pikachu": {"Tier Rank (S-F)": "S", "Weight": 68, "Run Speed": 2.04, "Air Speed": 1.05, "Fall Speed": "Close Combat"},
+    "Luigi": {"Tier Rank (S-F)": "B", "Weight": 97, "Run Speed": 1.37, "Air Speed": 0.98, "Fall Speed": 1.5},
+    "Ness": {"Tier Rank (S-F)": "B", "Weight": 94, "Run Speed": 1.45, "Air Speed": 0.98, "Fall Speed": 1.5},
+    "Captain Falcon": {"Tier Rank (S-F)": "A", "Weight": 104, "Run Speed": 2.55, "Air Speed": 1.15, "Fall Speed": 1.7},
+    "Jigglypuff": {"Tier Rank (S-F)": "D", "Weight": 60, "Run Speed": 1.07, "Air Speed": 0.7, "Fall Speed": 1.1},
+    "Peach": {"Tier Rank (S-F)": "S", "Weight": 89, "Run Speed": 1.2, "Air Speed": 1.05, "Fall Speed": 1.2},
+    "Daisy": {"Tier Rank (S-F)": "S", "Weight": 89, "Run Speed": 1.2, "Air Speed": 1.05, "Fall Speed": 1.2},
+    "Bowser": {"Tier Rank (S-F)": "B", "Weight": 135, "Run Speed": 1.88, "Air Speed": 0.9, "Fall Speed": 1.4},
+    "Ice Climbers": {"Tier Rank (S-F)": "B", "Weight": 92, "Run Speed": 1.26, "Air Speed": 1.05, "Fall Speed": 1.3},
+    "Sheik": {"Tier Rank (S-F)": "B", "Weight": 78, "Run Speed": 2.05, "Air Speed": 1.07, "Fall Speed": 1.7},
+    "Zelda": {"Tier Rank (S-F)": "B", "Weight": 85, "Run Speed": 1.25, "Air Speed": 1.05, "Fall Speed": 1.4},
+    "Dr. Mario": {"Tier Rank (S-F)": "C", "Weight": 98, "Run Speed": 1.43, "Air Speed": 1.05, "Fall Speed": 1.2},
+    "Pichu": {"Tier Rank (S-F)": "C", "Weight": 62, "Run Speed": 1.83, "Air Speed": 1.05, "Fall Speed": 1.68},
+    "Falco": {"Tier Rank (S-F)": "B", "Weight": 82, "Run Speed": 1.61, "Air Speed": 1.05, "Fall Speed": 1.68},
+    "Marth": {"Tier Rank (S-F)": "A", "Weight": 90, "Run Speed": 1.6, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Lucina": {"Tier Rank (S-F)": "A", "Weight": 90, "Run Speed": 1.6, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Young Link": {"Tier Rank (S-F)": "A", "Weight": 84, "Run Speed": 1.51, "Air Speed": 1.28, "Fall Speed": 1.5},
+    "Ganondorf": {"Tier Rank (S-F)": "C", "Weight": 113, "Run Speed": 1.32, "Air Speed": 0.9, "Fall Speed": "Close Combat"},
+    "Mewtwo": {"Tier Rank (S-F)": "B", "Weight": 79, "Run Speed": 1.8, "Air Speed": 1.35, "Fall Speed": 1.5},
+    "Roy": {"Tier Rank (S-F)": "S", "Weight": 95, "Run Speed": 1.78, "Air Speed": 1.3, "Fall Speed": 1.4},
+    "Chrom": {"Tier Rank (S-F)": "W", "Weight": 95, "Run Speed": 1.78, "Air Speed": 1.08, "Fall Speed": 1.4},
+    "Mr. Game & Watch": {"Tier Rank (S-F)": "A", "Weight": 75, "Run Speed": 1.5, "Air Speed": 1.4, "Fall Speed": 1.8},
+    "Meta Knight": {"Tier Rank (S-F)": "B", "Weight": 80, "Run Speed": 1.8, "Air Speed": 1.2, "Fall Speed": "Close Combat"},
+    "Pit": {"Tier Rank (S-F)": "B", "Weight": 96, "Run Speed": 1.55, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Dark Pit": {"Tier Rank (S-F)": "B", "Weight": 96, "Run Speed": 1.55, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Zero Suit Samus": {"Tier Rank (S-F)": "S", "Weight": 80, "Run Speed": 2.0, "Air Speed": 1.05, "Fall Speed": 1.7},
+    "Wario": {"Tier Rank (S-F)": "A", "Weight": 107, "Run Speed": 1.5, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Snake": {"Tier Rank (S-F)": "S", "Weight": 107, "Run Speed": 1.1, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "Ike": {"Tier Rank (S-F)": "B", "Weight": 107, "Run Speed": 1.36, "Air Speed": 0.9, "Fall Speed": 1.4},
+    "Pokémon Trainer": {"Tier Rank (S-F)": "S", "Weight": "N/A", "Run Speed": "Varies", "Air Speed": "Varies", "Fall Speed": "Varies"},
+    "Diddy Kong": {"Tier Rank (S-F)": "A", "Weight": 90, "Run Speed": 2.1, "Air Speed": 1.1, "Fall Speed": 1.6},
+    "Lucas": {"Tier Rank (S-F)": "B", "Weight": 94, "Run Speed": 1.58, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Sonic": {"Tier Rank (S-F)": "B", "Weight": 84, "Run Speed": 3.85, "Air Speed": 1.4, "Fall Speed": 1.4},
+    "King Dedede": {"Tier Rank (S-F)": "B", "Weight": 127, "Run Speed": 1.32, "Air Speed": 0.88, "Fall Speed": 1.4},
+    "Olimar": {"Tier Rank (S-F)": "B", "Weight": 79, "Run Speed": 1.45, "Air Speed": 1.1, "Fall Speed": 1.5},
+    "Lucario": {"Tier Rank (S-F)": "B", "Weight": 90, "Run Speed": 1.7, "Air Speed": 1.2, "Fall Speed": 1.4},
+    "R.O.B.": {"Tier Rank (S-F)": "S", "Weight": 106, "Run Speed": 1.5, "Air Speed": 1.05, "Fall Speed": 1.5},
+    "Toon Link": {"Tier Rank (S-F)": "A", "Weight": 84, "Run Speed": 1.51, "Air Speed": 1.28, "Fall Speed": 1.28},
+    "Wolf": {"Tier Rank (S-F)": "A", "Weight": 92, "Run Speed": 1.65, "Air Speed": 1.05, "Fall Speed": 1.6},
+    "Villager": {"Tier Rank (S-F)": "B", "Weight": 92, "Run Speed": 1.4, "Air Speed": 1.1, "Fall Speed": 1.3},
+    "Mega Man": {"Tier Rank (S-F)": "B", "Weight": 102, "Run Speed": 1.43, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Wii Fit Trainer": {"Tier Rank (S-F)": "B", "Weight": 96, "Run Speed": 1.6, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Rosalina & Lumal": {"Tier Rank (S-F)": "A", "Weight": 78, "Run Speed": 1.35, "Air Speed": 1.2, "Fall Speed": 1.3},
+    "Little Mac": {"Tier Rank (S-F)": "C", "Weight": 87, "Run Speed": 2.3, "Air Speed": 0.7, "Fall Speed": 1.5},
+    "Greninja": {"Tier Rank (S-F)": "A", "Weight": 82, "Run Speed": 2.05, "Air Speed": 1.75, "Fall Speed": 1.6},
+    "Palutena": {"Tier Rank (S-F)": "S", "Weight": 91, "Run Speed": 1.75, "Air Speed": 1.1, "Fall Speed": 1.5},
+    "Pac-Man": {"Tier Rank (S-F)": "A", "Weight": 95, "Run Speed": 1.65, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Robin": {"Tier Rank (S-F)": "B", "Weight": 94, "Run Speed": 1.3, "Air Speed": 0.95, "Fall Speed": 1.25},
+    "Shulk": {"Tier Rank (S-F)": "A", "Weight": 97, "Run Speed": 1.55, "Air Speed": 1.1, "Fall Speed": "Close Combat"},
+    "Bowser Jr.": {"Tier Rank (S-F)": "B", "Weight": 100, "Run Speed": 1.4, "Air Speed": 0.95, "Fall Speed": 1.3},
+    "Duck Hunt": {"Tier Rank (S-F)": "B", "Weight": 86, "Run Speed": 1.4, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Ryu": {"Tier Rank (S-F)": "B", "Weight": 103, "Run Speed": 1.3, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "Ken": {"Tier Rank (S-F)": "B", "Weight": 103, "Run Speed": 1.3, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "Cloud": {"Tier Rank (S-F)": "S", "Weight": 100, "Run Speed": 1.7, "Air Speed": 0.95, "Fall Speed": 1.6},
+    "Corrin": {"Tier Rank (S-F)": "B", "Weight": 97, "Run Speed": 1.45, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Bayonetta": {"Tier Rank (S-F)": "C", "Weight": 81, "Run Speed": 1.8, "Air Speed": 1.05, "Fall Speed": 1.6},
+    "Inkling": {"Tier Rank (S-F)": "A", "Weight": 94, "Run Speed": 1.85, "Air Speed": 1.1, "Fall Speed": 1.5},
+    "Ridley": {"Tier Rank (S-F)": "B", "Weight": 107, "Run Speed": 1.55, "Air Speed": 1.05, "Fall Speed": 1.6},
+    "Simon": {"Tier Rank (S-F)": "B", "Weight": 107, "Run Speed": 1.1, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "Richter": {"Tier Rank (S-F)": "B", "Weight": 107, "Run Speed": 1.1, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "King K. Rool": {"Tier Rank (S-F)": "B", "Weight": 133, "Run Speed": 1.25, "Air Speed": 0.85, "Fall Speed": 1.4},
+    "Isabelle": {"Tier Rank (S-F)": "B", "Weight": 84, "Run Speed": 1.18, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Incineroar": {"Tier Rank (S-F)": "B", "Weight": 116, "Run Speed": 1.2, "Air Speed": 0.85, "Fall Speed": 1.4},
+    "Piranha Plant": {"Tier Rank (S-F)": "C", "Weight": 112, "Run Speed": 1.2, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "Joker": {"Tier Rank (S-F)": "S", "Weight": 93, "Run Speed": 1.95, "Air Speed": 0.95, "Fall Speed": 1.6},
+    "Hero": {"Tier Rank (S-F)": "B", "Weight": 101, "Run Speed": 1.55, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Banjo & Kazooie": {"Tier Rank (S-F)": "A", "Weight": 106, "Run Speed": 1.5, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Terry Bogard": {"Tier Rank (S-F)": "A", "Weight": 108, "Run Speed": 1.6, "Air Speed": 0.9, "Fall Speed": 1.4},
+    "Byleth": {"Tier Rank (S-F)": "B", "Weight": 97, "Run Speed": 1.45, "Air Speed": 0.9, "Fall Speed": 1.4},
+    "Min Min": {"Tier Rank (S-F)": "S", "Weight": 104, "Run Speed": 1.55, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Steve": {"Tier Rank (S-F)": "S", "Weight": 92, "Run Speed": 1.3, "Air Speed": 0.9, "Fall Speed": 1.4},
+    "Sephiroth": {"Tier Rank (S-F)": "S", "Weight": 104, "Run Speed": 1.7, "Air Speed": 0.95, "Fall Speed": 1.6},
+    "Pyra/Mythra": {"Tier Rank (S-F)": "S", "Weight": 98, "Run Speed": 1.6, "Air Speed": 1.1, "Fall Speed": 1.5},
+    "Kazuya": {"Tier Rank (S-F)": "S", "Weight": 109, "Run Speed": 1.5, "Air Speed": 0.9, "Fall Speed": 1.5},
+    "Sora": {"Tier Rank (S-F)": "S", "Weight": 79, "Run Speed": 1.95, "Air Speed": 1.05, "Fall Speed": 1.2},
+    "Mii Brawler": {"Tier Rank (S-F)": "B", "Weight": 94, "Run Speed": 1.6, "Air Speed": 1.1, "Fall Speed": 1.4},
+    "Mii Swordfighter": {"Tier Rank (S-F)": "B", "Weight": 97, "Run Speed": 1.5, "Air Speed": 0.95, "Fall Speed": 1.4},
+    "Mii Gunner": {"Tier Rank (S-F)": "B", "Weight": 97, "Run Speed": 1.35, "Air Speed": 0.95, "Fall Speed": 1.4}
+}
 
 # --- Custom CSS (Slightly modified from last version for clarity) ---
 st.markdown("""
 <style>
 .match-box { 
-    border: 1px solid #ddd; /* FIX: Added space after colon */
-    border-radius: 10px; /* FIX: Added space after colon */
-    padding: 6px 8px; /* FIX: Added space after colon */
-    margin: 6px 0; /* FIX: Added space after colon */
-    font-size: 14px; /* FIX: Added space after colon */
+    border: 1px solid #ddd; 
+    border-radius: 10px; 
+    padding: 6px 8px; 
+    margin: 6px 0; 
+    font-size: 14px; 
     line-height: 1.25; 
     background: #fff; 
 }
 .round-title { 
-    font-weight: 700; /* FIX: Added space after colon */
-    margin-bottom: 8px; /* FIX: Added space after colon */
+    font-weight: 700; 
+    margin-bottom: 8px; 
 }
 .name-line { 
-    display: flex; /* FIX: Added space after colon */
+    display: flex; 
     align-items: center; 
-    gap: 6px; /* FIX: Added space after colon */
+    gap: 6px; 
 }
 .name-line img { vertical-align: middle; }
 .tbd { 
-    opacity: 0.6; /* FIX: Added space after colon */
+    opacity: 0.6; 
     font-style: italic; 
 }
 .legend-badge { 
     display: inline-block; 
-    width: 10px; /* FIX: Added space after colon */
-    height: 10px; /* FIX: Added space after colon */
-    border-radius: 2px; /* FIX: Added space after colon */
-    margin-right: 6px; /* FIX: Added space after colon */
+    width: 10px; 
+    height: 10px; 
+    border-radius: 2px; 
+    margin-right: 6px; 
     vertical-align: middle; 
 }
 .small { 
-    font-size: 13px; /* FIX: Added space after colon */
+    font-size: 13px; 
 }
 </style>
 """, unsafe_allow_html=True)
@@ -353,6 +445,32 @@ def df_to_entries(df: pd.DataFrame, clean_rows_flag: bool) -> List[Entry]:
              entries.append(Entry(player=pl, character=ch)) # Allow non-Smash characters for flexibility
     return entries
 
+# ---------------------------- Character Data Generation ----------------------------
+
+def get_char_data(char_name: str) -> Dict[str, str | float]:
+    """Retrieves actual character stats from the SMASH_DATA dictionary."""
+    # Check if the character exists in our hardcoded data
+    data = SMASH_DATA.get(char_name, None)
+    
+    if data:
+        # Reformat keys for display purposes
+        return {
+            "Tier Rank": data.get("Tier Rank (S-F)", "N/A"),
+            "Weight": data.get("Weight", "N/A"),
+            "Run Speed": data.get("Run Speed", "N/A"),
+            "Air Speed": data.get("Air Speed", "N/A"),
+            "Fall Speed": data.get("Fall Speed", "N/A"),
+        }
+    else:
+        # Fallback for characters not found in the data source
+        return {
+            "Tier Rank": "Unknown",
+            "Weight": "Unknown",
+            "Run Speed": "Unknown",
+            "Air Speed": "Unknown",
+            "Fall Speed": "Unknown",
+        }
+
 # ---------------------------- App Pages ----------------------------
 def show_bracket_generator_page(players, team_of, team_colors, clean_rows):
     st.title("🎮 Smash Bracket — Round 1 Generator")
@@ -460,45 +578,50 @@ def show_bracket_generator_page(players, team_of, team_colors, clean_rows):
 
 
 def show_character_info_page():
-    st.title("📚 Smash Bros. Character Info")
+    st.title("📚 Smash Bros. Character Info & Comparison")
     st.markdown("---")
     
-    st.subheader("Select a Character for Mock Details")
-    
-    char_selection = st.selectbox("Character", options=SMASH_CHARACTERS)
+    # Use multi-select to allow comparison
+    char_selections = st.multiselect(
+        "Select up to 4 Characters to Compare", 
+        options=SMASH_CHARACTERS, 
+        default=["Mario", "Link"],
+        max_selections=4
+    )
     
     st.divider()
-    
-    # Generate Mock Data for the selected character
-    # Ensures the mock data is consistent once selected by hashing the character name
-    random.seed(char_selection) 
-    
-    mock_stats = {
-        "Weight Class": random.choice(["Light", "Medium", "Heavy", "Super-Heavy"]),
-        "Tier Rank (Approx.)": random.choice(["S", "A+", "A", "B+", "B", "C"]),
-        "Dash Speed": f"{random.uniform(1.0, 3.0):.2f}",
-        "Fall Speed": f"{random.uniform(1.0, 2.0):.2f}",
-        "Recommended Playstyle": random.choice(["Aggressive Rushdown", "Zoning/Defensive", "Bait & Punish", "Grappler"]),
-    }
-    random.seed(None) # Reset seed
 
-    st.subheader(f"Stats: {char_selection}")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Weight Class", mock_stats["Weight Class"])
-        st.metric("Dash Speed", mock_stats["Dash Speed"])
+    if not char_selections:
+        st.info("Please select at least one character to view stats.")
+        return
 
-    with col2:
-        st.metric("Tier Rank", mock_stats["Tier Rank (Approx.)"])
-        st.metric("Fall Speed", mock_stats["Fall Speed"])
-        
-    with col3:
-        st.metric("Playstyle", mock_stats["Recommended Playstyle"])
-        
+    # Prepare data for comparison
+    stats_data = {}
+    for char in char_selections:
+        stats_data[char] = get_char_data(char)
+    
+    # Reformat data into a single DataFrame for easy side-by-side comparison
+    # Keys are stats (row headers), values are lists of character values (columns)
+    comparison_data = {}
+    
+    # We use the keys from the get_char_data function for consistent rows
+    # Use a dummy character or the first selected character to get the row structure
+    example_char_data = get_char_data(char_selections[0] if char_selections else "Mario")
+    
+    for stat_name in example_char_data.keys():
+        comparison_data[stat_name] = [stats_data[char].get(stat_name, "N/A") for char in char_selections]
+
+    # Create the final comparison DataFrame
+    comparison_df = pd.DataFrame(comparison_data, index=char_selections).T # Transpose to put stats on the rows
+    comparison_df.index.name = "Metric"
+    
+    st.subheader("Character Stats Comparison (Data from your PDF)")
+    
+    # Display the comparison table
+    st.dataframe(comparison_df, use_container_width=True)
+    
     st.divider()
-    st.info(f"**About {char_selection}:** This data is generated for illustrative purposes only. For competitive play, always consult official frame data and tournament resources.")
+    st.info("The character data displayed is extracted directly from the spreadsheet you provided and represents key attributes like weight and speed.")
 
 # ---------------------------- Sidebar & Main App Flow ----------------------------
 # Initialize a placeholder for the page selected in the sidebar
