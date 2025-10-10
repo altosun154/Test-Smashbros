@@ -120,6 +120,7 @@ SMASH_DATA = {
 # --- Custom CSS (Slightly modified from last version for clarity) ---
 st.markdown("""
 <style>
+/* Base Styles for the Bracket Generator */
 .match-box { 
     border: 1px solid #ddd; 
     border-radius: 10px; 
@@ -153,6 +154,28 @@ st.markdown("""
 }
 .small { 
     font-size: 13px; 
+}
+
+/* Custom Styles for Character Comparison Cards */
+.comparison-card {
+    background-color: #f7f9fb;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 10px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-top: 5px solid; /* Placeholder for color coding */
+}
+
+.char-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.char-stat-label {
+    font-weight: 600;
+    margin-top: 10px;
+    font-size: 14px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -445,11 +468,10 @@ def df_to_entries(df: pd.DataFrame, clean_rows_flag: bool) -> List[Entry]:
              entries.append(Entry(player=pl, character=ch)) # Allow non-Smash characters for flexibility
     return entries
 
-# ---------------------------- Character Data Generation ----------------------------
+# ---------------------------- Character Data Retrieval ----------------------------
 
 def get_char_data(char_name: str) -> Dict[str, str | float]:
     """Retrieves actual character stats from the SMASH_DATA dictionary."""
-    # Check if the character exists in our hardcoded data
     data = SMASH_DATA.get(char_name, None)
     
     if data:
@@ -470,6 +492,23 @@ def get_char_data(char_name: str) -> Dict[str, str | float]:
             "Air Speed": "Unknown",
             "Fall Speed": "Unknown",
         }
+        
+def render_stat_meter(label: str, value, max_val: float, color: str):
+    """Renders a labeled progress bar for a quantitative stat."""
+    if isinstance(value, (int, float)):
+        # Calculate progress relative to the maximum possible value
+        progress = min(1.0, value / max_val)
+        st.markdown(f'<p class="char-stat-label">{label}: <b>{value}</b></p>', unsafe_allow_html=True)
+        # Manually create colored progress bar for better visual control (Streamlit doesn't support color args easily)
+        st.markdown(f"""
+        <div style="background-color: #e0e0e0; border-radius: 5px; height: 10px; margin-bottom: 5px;">
+            <div style="background-color: {color}; height: 10px; width: {progress*100}%; border-radius: 5px;"></div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # For non-numeric values (Tier, "Close Combat", "Varies")
+        st.markdown(f'<p class="char-stat-label">{label}: <b>{value}</b></p>', unsafe_allow_html=True)
+
 
 # ---------------------------- App Pages ----------------------------
 def show_bracket_generator_page(players, team_of, team_colors, clean_rows):
@@ -578,7 +617,7 @@ def show_bracket_generator_page(players, team_of, team_colors, clean_rows):
 
 
 def show_character_info_page():
-    st.title("📚 Smash Bros. Character Info & Comparison (2 Max)")
+    st.title("📚 Smash Bros. Character Info & Comparison")
     st.markdown("---")
     
     # Use two separate selectboxes for comparison
@@ -615,31 +654,77 @@ def show_character_info_page():
     # Create the list of selected characters (guaranteed to be 2)
     char_selections = [char_selection1, char_selection2]
     
-    # Prepare data for comparison
-    stats_data = {}
-    for char in char_selections:
-        stats_data[char] = get_char_data(char)
-    
-    # Reformat data into a single DataFrame for easy side-by-side comparison
-    comparison_data = {}
-    
-    # Use the keys from the get_char_data function for consistent rows
-    example_char_data = get_char_data(char_selections[0])
-    
-    for stat_name in example_char_data.keys():
-        comparison_data[stat_name] = [stats_data[char].get(stat_name, "N/A") for char in char_selections]
+    # --- Maximum values for visual comparison bars (based on provided data) ---
+    MAX_WEIGHT = 135 # Bowser
+    MAX_RUN_SPEED = 3.85 # Sonic
+    MAX_AIR_SPEED = 1.75 # Greninja
+    MAX_FALL_SPEED = 1.8 # Fox
 
-    # Create the final comparison DataFrame
-    comparison_df = pd.DataFrame(comparison_data, index=char_selections).T # Transpose to put stats on the rows
-    comparison_df.index.name = "Metric"
+    # Create two columns for the character cards
+    col1, col2 = st.columns(2)
     
-    st.subheader("Character Stats Comparison (Data from your PDF)")
+    # --- RENDER CHARACTER 1 ---
+    char1_data = get_char_data(char_selection1)
+    with col1:
+        st.markdown(f'<div class="comparison-card" style="border-top-color: #3F51B5;">', unsafe_allow_html=True)
+        st.markdown(f'<p class="char-title">{char_selection1}</p>', unsafe_allow_html=True)
+        # Placeholder for image
+        st.image(f"https://placehold.co/100x100/3F51B5/ffffff?text={char_selection1[0]}", width=100, caption="Character Image")
+
+        st.markdown("---")
+        
+        # Tier Rank (Fixed value)
+        st.markdown(f'<p class="char-stat-label">Tier Rank: <b>{char1_data["Tier Rank"]}</b></p>', unsafe_allow_html=True)
+        
+        # Weight comparison
+        render_stat_meter("Weight", char1_data["Weight"], MAX_WEIGHT, "#4CAF50")
+        
+        # Run Speed comparison
+        render_stat_meter("Run Speed", char1_data["Run Speed"], MAX_RUN_SPEED, "#FF9800")
+        
+        # Air Speed comparison
+        render_stat_meter("Air Speed", char1_data["Air Speed"], MAX_AIR_SPEED, "#009688")
+        
+        # Fall Speed (Meter only for numeric, text for non-numeric)
+        if isinstance(char1_data["Fall Speed"], (int, float)):
+             render_stat_meter("Fall Speed", char1_data["Fall Speed"], MAX_FALL_SPEED, "#E91E63")
+        else:
+             st.markdown(f'<p class="char-stat-label">Fall Speed: <b>{char1_data["Fall Speed"]}</b></p>', unsafe_allow_html=True)
+             
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    # Display the comparison table
-    st.dataframe(comparison_df, use_container_width=True)
-    
+    # --- RENDER CHARACTER 2 ---
+    char2_data = get_char_data(char_selection2)
+    with col2:
+        st.markdown(f'<div class="comparison-card" style="border-top-color: #E91E63;">', unsafe_allow_html=True)
+        st.markdown(f'<p class="char-title">{char_selection2}</p>', unsafe_allow_html=True)
+        # Placeholder for image
+        st.image(f"https://placehold.co/100x100/E91E63/ffffff?text={char_selection2[0]}", width=100, caption="Character Image")
+
+        st.markdown("---")
+        
+        # Tier Rank (Fixed value)
+        st.markdown(f'<p class="char-stat-label">Tier Rank: <b>{char2_data["Tier Rank"]}</b></p>', unsafe_allow_html=True)
+        
+        # Weight comparison
+        render_stat_meter("Weight", char2_data["Weight"], MAX_WEIGHT, "#4CAF50")
+        
+        # Run Speed comparison
+        render_stat_meter("Run Speed", char2_data["Run Speed"], MAX_RUN_SPEED, "#FF9800")
+        
+        # Air Speed comparison
+        render_stat_meter("Air Speed", char2_data["Air Speed"], MAX_AIR_SPEED, "#009688")
+        
+        # Fall Speed (Meter only for numeric, text for non-numeric)
+        if isinstance(char2_data["Fall Speed"], (int, float)):
+             render_stat_meter("Fall Speed", char2_data["Fall Speed"], MAX_FALL_SPEED, "#E91E63")
+        else:
+             st.markdown(f'<p class="char-stat-label">Fall Speed: <b>{char2_data["Fall Speed"]}</b></p>', unsafe_allow_html=True)
+             
+        st.markdown('</div>', unsafe_allow_html=True)
+        
     st.divider()
-    st.info("The character data displayed is extracted directly from the spreadsheet you provided and represents key attributes like weight and speed.")
+    st.info("The comparison uses actual data from your provided file. The colored bars compare the stat value against the highest value found in the entire roster (e.g., Bowser for Weight).")
 
 # ---------------------------- Sidebar & Main App Flow ----------------------------
 # Initialize a placeholder for the page selected in the sidebar
