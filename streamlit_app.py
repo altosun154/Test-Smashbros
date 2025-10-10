@@ -10,7 +10,7 @@ st.set_page_config(page_title="Smash Bracket", page_icon="🎮", layout="wide")
 
 # --- Smash Ultimate Character List (for use in data entry and info page) ---
 SMASH_CHARACTERS = [
-    "Mario", "Donkey Kong", "Link", "Samus", "Yoshi", "Kirby", "Fox", "Pikachu", 
+    "Mario", "Donkey Kong", "Link", "Samus", "Dark Samus", "Yoshi", "Kirby", "Fox", "Pikachu", 
     "Luigi", "Captain Falcon", "Jigglypuff", "Peach", "Daisy", "Bowser", "Ice Climbers",
     "Sheik", "Zelda", "Dr. Mario", "Pichu", "Falco", "Marth", "Lucina", "Young Link", 
     "Ganondorf", "Mewtwo", "Roy", "Chrom", "Mr. Game & Watch", "Meta Knight", 
