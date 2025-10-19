@@ -29,8 +29,8 @@ SMASH_CHARACTERS = [
 # --- ACTUAL CHARACTER DATA FROM UPLOADED PDF ---
 # This dictionary replaces the random mock data generator.
 SMASH_DATA = {
-    "Mario": {"Tier Rank (S-F)": "B", "Weight": 98, "Run Speed": 1.57, "Air Speed": 0.9, "Fall Speed": 1.62},
-    "Donkey Kong": {"Tier Rank (S-F)": "B", "Weight": 127, "Run Speed": 1.65, "Air Speed": 0.95, "Fall Speed": "Close Combat"},
+    "Mario": {"Tier Rank (S-F)": "B", "Weight": 98, "Run Speed": 1.57, "Air Speed": 1.1, "Fall Speed": 1.31, "Combat": "Balanced", "Move Set": "F.L.U.D.D., Fireball, Supoer Jump Punch, Cape, Mario Finale"},
+    "Donkey Kong": {"Tier Rank (S-F)": "B", "Weight": 127, "Run Speed": 1.65, "Air Speed": 0.9, "Fall Speed": 1.62, "Combat": "Close Combat", "Move Set": "Giant Punch, Headbutt, Spinning Kong, Hand Slap, Jungle Rush"},
     "Link": {"Tier Rank (S-F)": "B", "Weight": 104, "Run Speed": 1.43, "Air Speed": 0.95, "Fall Speed": 1.62},
     "Samus": {"Tier Rank (S-F)": "B", "Weight": 108, "Run Speed": 1.51, "Air Speed": 0.98, "Fall Speed": "Charge Shot, Missile, Screw"},
     "Dark Samus": {"Tier Rank (S-F)": "B", "Weight": 108, "Run Speed": 1.51, "Air Speed": 0.98, "Fall Speed": "Attack, Bomb, Phazon Laser"},
