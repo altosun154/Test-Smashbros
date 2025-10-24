@@ -29,8 +29,8 @@ SMASH_CHARACTERS = [
 # --- ACTUAL CHARACTER DATA FROM UPLOADED PDF ---
 # This dictionary replaces the random mock data generator.
 SMASH_DATA = {
-    "Mario": {"Tier Rank (S-F)": "B", "Weight": 98, "Run Speed": 1.57, "Air Speed": 1.1, "Fall Speed": 1.31, "Combat": "Balanced", "Move Set": "F.L.U.D.D., Fireball, Supoer Jump Punch, Cape, Mario Finale"},
-    "Donkey Kong": {"Tier Rank (S-F)": "B", "Weight": 127, "Run Speed": 1.65, "Air Speed": 0.9, "Fall Speed": 1.62, "Combat": "Close Combat", "Move Set": "Giant Punch, Headbutt, Spinning Kong, Hand Slap, Jungle Rush"},
+    "Mario": {"Tier Rank (S-F)": "B", "Weight": 98, "Run Speed": 1.57, "Air Speed": 0.9, "Fall Speed": 1.62},
+    "Donkey Kong": {"Tier Rank (S-F)": "B", "Weight": 127, "Run Speed": 1.65, "Air Speed": 0.95, "Fall Speed": "Close Combat"},
     "Link": {"Tier Rank (S-F)": "B", "Weight": 104, "Run Speed": 1.43, "Air Speed": 0.95, "Fall Speed": 1.62},
     "Samus": {"Tier Rank (S-F)": "B", "Weight": 108, "Run Speed": 1.51, "Air Speed": 0.98, "Fall Speed": "Charge Shot, Missile, Screw"},
     "Dark Samus": {"Tier Rank (S-F)": "B", "Weight": 108, "Run Speed": 1.51, "Air Speed": 0.98, "Fall Speed": "Attack, Bomb, Phazon Laser"},
@@ -176,6 +176,20 @@ st.markdown("""
     font-weight: 600;
     margin-top: 10px;
     font-size: 14px;
+}
+
+/* Style for Round Robin Leaderboard */
+.leaderboard-container {
+    padding: 10px;
+    border-radius: 10px;
+    background-color: #f0f2f6;
+    margin-top: 20px;
+}
+.leaderboard-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -510,6 +524,150 @@ def render_stat_meter(label: str, value, max_val: float, color: str):
         st.markdown(f'<p class="char-stat-label">{label}: <b>{value}</b></p>', unsafe_allow_html=True)
 
 
+# ---------------------------- Round Robin Logic ----------------------------
+
+def generate_round_robin_schedule(players: List[str]) -> List[Tuple[str, str]]:
+    """Generates a list of all unique match-ups (Player A vs Player B)."""
+    matches = []
+    # If odd number of players, add a 'BYE' placeholder
+    if len(players) % 2 != 0:
+        players = players + ['BYE']
+    
+    n = len(players)
+    rounds = n - 1 # Total rounds to be played
+    
+    # Check if schedule exists in state and is valid for current players
+    schedule_key = tuple(sorted(players))
+    if "rr_schedule" not in st.session_state or st.session_state["rr_schedule"].get("players") != schedule_key:
+        
+        # Implementation of the circle method for scheduling
+        matchups = []
+        p = players.copy()
+        
+        for _ in range(rounds):
+            half = n // 2
+            for i in range(half):
+                p1 = p[i]
+                p2 = p[n - 1 - i]
+                # Only add matches between actual players (skip BYE vs Player)
+                if p1 != 'BYE' and p2 != 'BYE':
+                    matchups.append((p1, p2))
+                elif p1 != 'BYE':
+                    # p1 gets the bye
+                    pass
+                elif p2 != 'BYE':
+                    # p2 gets the bye
+                    pass
+
+            # Rotate all players except the first (or last, depending on implementation)
+            p.insert(1, p.pop())
+            
+        # Store and initialize results/records
+        st.session_state["rr_schedule"] = {
+            "players": schedule_key,
+            "matches": matchups,
+        }
+        st.session_state["rr_results"] = {}
+        st.session_state["rr_records"] = {player: {"Wins": 0, "Losses": 0} for player in players if player != 'BYE'}
+        
+    return st.session_state["rr_schedule"]["matches"]
+
+def update_round_robin_records():
+    """Recalculates records based on rr_results."""
+    records = {player: {"Wins": 0, "Losses": 0} for player in st.session_state["rr_records"].keys()}
+    
+    for match_id, winner in st.session_state.rr_results.items():
+        if winner == "(Undecided)":
+            continue
+            
+        # Match ID format: Player A|Player B
+        p1, p2 = match_id.split('|')
+        loser = p2 if winner == p1 else p1
+        
+        if winner in records:
+            records[winner]["Wins"] += 1
+        if loser in records:
+            records[loser]["Losses"] += 1
+            
+    # Update session state with new records
+    st.session_state.rr_records = records
+
+def show_round_robin_page(players: List[str]):
+    st.title("🗂️ Round Robin Scheduler & Leaderboard")
+    st.markdown("---")
+    
+    if len(players) < 2:
+        st.error("Please enter at least two players in the sidebar to generate a Round Robin tournament.")
+        return
+
+    # 1. Generate/Get Schedule
+    schedule = generate_round_robin_schedule(players)
+
+    # 2. Results & Match Input
+    st.subheader("Match Results Input")
+    st.info(f"Total Matches to Play: **{len(schedule)}**")
+    
+    # Recalculate records first
+    update_round_robin_records()
+    
+    cols = st.columns(3)
+    
+    for i, (p1, p2) in enumerate(schedule, start=1):
+        match_id = f"{p1}|{p2}"
+        
+        # Use existing winner or default to (Undecided)
+        default_winner = st.session_state.rr_results.get(match_id, "(Undecided)")
+        options = [p1, p2, "(Undecided)"]
+        default_index = options.index(default_winner)
+        
+        with cols[i % len(cols)]:
+            st.markdown(f"**Match {i}:** {p1} vs {p2}")
+            
+            winner = st.radio(
+                f"Winner",
+                options=options,
+                index=default_index,
+                key=f"rr_winner_{match_id}",
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+            
+            # Update results if a choice was made
+            st.session_state.rr_results[match_id] = winner
+            
+    # 3. Leaderboard Display
+    st.markdown("---")
+    st.subheader("🏆 Tournament Leaderboard")
+    
+    # Sort the records: by Wins (descending), then Losses (ascending)
+    records_df = pd.DataFrame.from_dict(st.session_state.rr_records, orient='index')
+    
+    if not records_df.empty:
+        records_df["Win Rate"] = records_df.apply(lambda row: f"{row['Wins'] / (row['Wins'] + row['Losses']):.2f}" if (row['Wins'] + row['Losses']) > 0 else "0.00", axis=1)
+        records_df.sort_values(by=['Wins', 'Losses'], ascending=[False, True], inplace=True)
+        records_df.reset_index(names=['Player'], inplace=True)
+        records_df.index = records_df.index + 1 # Start index at 1
+        
+        st.dataframe(
+            records_df, 
+            use_container_width=True,
+            column_config={
+                "Player": st.column_config.Column("Player", width="small"),
+                "Wins": st.column_config.Column("Wins", width="small"),
+                "Losses": st.column_config.Column("Losses", width="small"),
+                "Win Rate": st.column_config.ProgressColumn("Win Rate", format="%.1f", width="small", min_value=0, max_value=1),
+            }
+        )
+    else:
+        st.info("No records to display. Please enter match results.")
+        
+    st.markdown("---")
+    if st.button("🔄 Reset All Round Robin Records"):
+        st.session_state["rr_results"] = {}
+        st.session_state["rr_records"] = {player: {"Wins": 0, "Losses": 0} for player in players if player != 'BYE'}
+        st.session_state.pop("rr_schedule", None)
+        st.rerun()
+
 # ---------------------------- App Pages ----------------------------
 def show_bracket_generator_page(players, team_of, team_colors, clean_rows):
     st.title("🎮 Smash Bracket — Round 1 Generator")
@@ -734,22 +892,12 @@ if "page" not in st.session_state:
 with st.sidebar:
     st.header("App Navigation")
     # This radio button controls which main function runs
-    st.session_state.page = st.radio("Switch View", options=["Bracket Generator", "Character Info"], index=0)
+    st.session_state.page = st.radio("Switch View", options=["Bracket Generator", "Round Robin", "Character Info"], index=0)
     
     st.divider()
 
-    # The rest of the sidebar is only for the Bracket Generator page
-    if st.session_state.page == "Bracket Generator":
-        st.header("Rule Set")
-        st.session_state.rule = st.selectbox(
-            "Choose mode",
-            options=["regular", "teams"],
-            index=0,
-            key="rule_select",
-            help="Regular: balanced random (no self-matches). Teams: regular + forbids same-team matches in Round 1."
-        )
-
-        st.divider()
+    # The rest of the sidebar is only for the Bracket Generator and Round Robin pages
+    if st.session_state.page == "Bracket Generator" or st.session_state.page == "Round Robin":
         st.header("Players")
         default_players = "You\nFriend1\nFriend2"
         st.text_area(
@@ -757,56 +905,83 @@ with st.sidebar:
             value=st.session_state.get("players_multiline", default_players),
             height=140,
             key="players_multiline",
-            help="These names populate the Player dropdown."
+            help="These names define the participants for both Bracket and Round Robin."
         )
         players = [p.strip() for p in st.session_state.players_multiline.splitlines() if p.strip()]
 
-        # Teams UI only in Teams mode
-        team_of: Dict[str, str] = {}
-        team_colors: Dict[str, str] = {}
-        if st.session_state.rule == "teams":
-            st.divider()
-            st.header("Teams & Colors")
-            team_names_input = st.text_input(
-                "Team labels (comma separated)",
-                value="Red, Blue",
-                key="team_names_input_key",
-                help="Example: Red, Blue, Green"
+        if st.session_state.page == "Bracket Generator":
+            st.header("Rule Set")
+            st.session_state.rule = st.selectbox(
+                "Choose mode",
+                options=["regular", "teams"],
+                index=0,
+                key="rule_select",
+                help="Regular: balanced random (no self-matches). Teams: regular + forbids same-team matches in Round 1."
             )
-            team_labels = [t.strip() for t in team_names_input.split(",") if t.strip()]
-            if not team_labels:
-                team_labels = ["Team A", "Team B"]
+            # Bracket specific UI
+            team_of: Dict[str, str] = {}
+            team_colors: Dict[str, str] = {}
+            if st.session_state.rule == "teams":
+                st.divider()
+                st.header("Teams & Colors")
+                team_names_input = st.text_input(
+                    "Team labels (comma separated)",
+                    value="Red, Blue",
+                    key="team_names_input_key",
+                    help="Example: Red, Blue, Green"
+                )
+                team_labels = [t.strip() for t in team_names_input.split(",") if t.strip()]
+                if not team_labels:
+                    team_labels = ["Team A", "Team B"]
 
-            st.caption("Pick a color for each team:")
-            for i, t in enumerate(team_labels):
-                default = TEAM_COLOR_FALLBACKS[i % len(TEAM_COLOR_FALLBACKS)]
-                team_colors[t] = st.color_picker(f"{t} color", value=default, key=f"team_color_{t}")
+                st.caption("Pick a color for each team:")
+                for i, t in enumerate(team_labels):
+                    default = TEAM_COLOR_FALLBACKS[i % len(TEAM_COLOR_FALLBACKS)]
+                    team_colors[t] = st.color_picker(f"{t} color", value=default, key=f"team_color_{t}")
 
-            st.caption("Assign each player to a team:")
-            for p in players:
-                team_of[p] = st.selectbox(f"{p}", options=["(none)"] + team_labels, key=f"team_{p}")
-            team_of = {p: (t if t != "(none)" else "") for p, t in team_of.items()}
+                st.caption("Assign each player to a team:")
+                for p in players:
+                    team_of[p] = st.selectbox(f"{p}", options=["(none)"] + team_labels, key=f"team_{p}")
+                team_of = {p: (t if t != "(none)" else "") for p, t in team_of.items()}
 
-        st.divider()
-        st.header("Characters per player")
-        st.number_input("How many per player?", min_value=1, max_value=50, value=2, step=1, key="chars_per_person")
+            st.divider()
+            st.header("Characters per player")
+            st.number_input("How many per player?", min_value=1, max_value=50, value=2, step=1, key="chars_per_person")
 
-        st.divider()
-        st.subheader("Build / Fill")
-        st.button("⚙️ Auto-Create/Reset Entries", use_container_width=True, key="build_clicked")
-        st.checkbox("Shuffle names when auto-filling", value=True, key="shuffle_within_player")
-        st.button("🎲 Auto-fill Characters", use_container_width=True, key="auto_fill_clicked")
+            st.divider()
+            st.subheader("Build / Fill")
+            st.button("⚙️ Auto-Create/Reset Entries", use_container_width=True, key="build_clicked")
+            st.checkbox("Shuffle names when auto-filling", value=True, key="shuffle_within_player")
+            st.button("🎲 Auto-fill Characters", use_container_width=True, key="auto_fill_clicked")
 
-        st.divider()
-        st.header("General")
-        clean_rows = st.checkbox("Remove empty rows", value=True)
-    else:
-        # Placeholder assignment when not on bracket page
+            st.divider()
+            st.header("General")
+            clean_rows = st.checkbox("Remove empty rows", value=True)
+            
+        else: # Round Robin page needs these defined
+             team_of, team_colors, clean_rows = {}, {}, True # Not used in RR, but defined
+
+    else: # Character Info page needs these defined
         players, team_of, team_colors, clean_rows = [], {}, {}, True
 
 
 # --- Main Content Render ---
 if st.session_state.page == "Bracket Generator":
+    # Ensure all required variables are set before calling the function
+    try:
+        rule = st.session_state.rule
+    except AttributeError:
+        # Default settings if coming from another page
+        rule = "regular"
+        players = [p.strip() for p in st.session_state.get("players_multiline", "You\nFriend1\nFriend2").splitlines() if p.strip()]
+        team_of = {}
+        team_colors = {}
+        clean_rows = True
+        
     show_bracket_generator_page(players, team_of, team_colors, clean_rows)
+elif st.session_state.page == "Round Robin":
+    # Get player list from sidebar state
+    players = [p.strip() for p in st.session_state.get("players_multiline", "You\nFriend1\nFriend2").splitlines() if p.strip()]
+    show_round_robin_page(players)
 else:
     show_character_info_page()
