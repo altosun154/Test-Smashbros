@@ -229,17 +229,27 @@ PLAYER_FALLBACKS = [
 if "player_colors" not in st.session_state:
     st.session_state.player_colors = {}
 
+def get_player_color(player: str, team_of: Dict[str, str], team_colors: Dict[str, str]) -> str:
+    """Retrieves the color for a player, prioritizing team color if in teams mode, 
+       otherwise using a unique, persistent individual color."""
+    
+    # 1. Check for Team Color (only in Teams Mode)
+    if st.session_state.get("page") == "Bracket Generator" and st.session_state.get("rule_select") == "teams":
+        t = team_of.get(player, "")
+        if t and team_colors.get(t):
+            return team_colors[t]
+    
+    # 2. Use Unique Persistent Player Color
+    if player not in st.session_state.player_colors:
+        current_index = len(st.session_state.player_colors) % len(PLAYER_FALLBACKS)
+        st.session_state.player_colors[player] = PLAYER_FALLBACKS[current_index]
+    
+    return st.session_state.player_colors[player]
+
+
 def render_name_html(player: str, team_of: Dict[str, str], team_colors: Dict[str, str]) -> str:
-    t = team_of.get(player, "")
-    if t and team_colors.get(t):
-        color = team_colors[t]
-    else:
-        # Use session state for persistent player color
-        if player not in st.session_state.player_colors:
-            current_index = len(st.session_state.player_colors) % len(PLAYER_FALLBACKS)
-            st.session_state.player_colors[player] = PLAYER_FALLBACKS[current_index]
-        color = st.session_state.player_colors[player]
-        
+    """Renders the player name with the determined color."""
+    color = get_player_color(player, team_of, team_colors)
     safe_player = player.replace("<", "&lt;").replace(">", "&gt;")
     return f"<span style='color:{color};font-weight:600'>{safe_player}</span>"
 
@@ -396,9 +406,9 @@ def render_bracket_grid(all_rounds: List[List[Tuple[Optional[Entry], Optional[En
     round_pairs = all_rounds[0]
     
     # Team Legend
-    if team_colors and any(team_of.values()):
+    if team_colors and any(team_of.values()) and st.session_state.get("rule_select") == "teams":
         legend = "  ".join([f"<span class='legend-badge' style='background:{c}'></span>{t}" for t, c in team_colors.items()])
-        st.markdown(f"<div class='small'><b>Legend:</b> {legend}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='small'><b>Legend (Teams):</b> {legend}</div>", unsafe_allow_html=True)
     
     # Use st.columns(1) to make a single column display for R1
     col = st.columns(1)[0]
@@ -408,8 +418,6 @@ def render_bracket_grid(all_rounds: List[List[Tuple[Optional[Entry], Optional[En
         
         for pair in round_pairs:
             a, b = pair
-            # Use persistent player_colors from session state
-            player_colors = st.session_state.player_colors
             
             st.markdown("<div class='match-box'>", unsafe_allow_html=True)
             st.markdown(render_entry_line(a, team_of, team_colors), unsafe_allow_html=True)
@@ -615,16 +623,39 @@ def show_round_robin_page(players: List[str]):
     for i, (p1, p2) in enumerate(schedule, start=1):
         match_id = f"{p1}|{p2}"
         
+        # Determine the color-coded labels for the radio buttons
+        p1_color = get_player_color(p1, {}, {}) # Teams dict is empty/ignored here
+        p2_color = get_player_color(p2, {}, {})
+        
+        p1_html = f'<span style="color:{p1_color}; font-weight: bold;">{p1}</span>'
+        p2_html = f'<span style="color:{p2_color}; font-weight: bold;">{p2}</span>'
+        undecided_html = '(Undecided)'
+        
         # Use existing winner or default to (Undecided)
         default_winner = st.session_state.rr_results.get(match_id, "(Undecided)")
         options = [p1, p2, "(Undecided)"]
-        default_index = options.index(default_winner)
         
+        # Determine the default index based on the actual winner name
+        try:
+            default_index = options.index(default_winner)
+        except ValueError:
+            default_index = 2
+
         with cols[i % len(cols)]:
-            st.markdown(f"**Match {i}:** {p1} vs {p2}")
+            st.markdown(f"**Match {i}:** {p1_html} vs {p2_html}")
+            
+            # Use the HTML for the options in the radio, but store the plain name
+            radio_options = {
+                p1_html: p1,
+                p2_html: p2,
+                undecided_html: "(Undecided)"
+            }
+
+            # Streamlit radio doesn't easily support HTML options that return the original value.
+            # We'll use the plain names in the radio and then render the match title separately.
             
             winner = st.radio(
-                f"Winner",
+                f"Winner (Match {i})",
                 options=options,
                 index=default_index,
                 key=f"rr_winner_{match_id}",
@@ -643,10 +674,14 @@ def show_round_robin_page(players: List[str]):
     records_df = pd.DataFrame.from_dict(st.session_state.rr_records, orient='index')
     
     if not records_df.empty:
-        records_df["Win Rate"] = records_df.apply(lambda row: f"{row['Wins'] / (row['Wins'] + row['Losses']):.2f}" if (row['Wins'] + row['Losses']) > 0 else "0.00", axis=1)
-        records_df.sort_values(by=['Wins', 'Losses'], ascending=[False, True], inplace=True)
+        # Add color column for display
         records_df.reset_index(names=['Player'], inplace=True)
+        records_df['Color'] = records_df['Player'].apply(lambda p: get_player_color(p, {}, {}))
+        
+        records_df["Win Rate"] = records_df.apply(lambda row: row['Wins'] / (row['Wins'] + row['Losses']) if (row['Wins'] + row['Losses']) > 0 else 0, axis=1)
+        records_df.sort_values(by=['Wins', 'Losses', 'Player'], ascending=[False, True, True], inplace=True)
         records_df.index = records_df.index + 1 # Start index at 1
+        records_df.drop(columns=['Color'], inplace=True) # Dropped Color because ProgressColumn uses its own color scheme
         
         st.dataframe(
             records_df, 
