@@ -233,13 +233,13 @@ def get_player_color(player: str, team_of: Dict[str, str], team_colors: Dict[str
     """Retrieves the color for a player, prioritizing team color if in teams mode, 
        otherwise using a unique, persistent individual color."""
     
-    # 1. Check for Team Color (only in Teams Mode)
+    # 1. Check for Team Color (only in Bracket Generator, Teams Mode)
     if st.session_state.get("page") == "Bracket Generator" and st.session_state.get("rule_select") == "teams":
         t = team_of.get(player, "")
         if t and team_colors.get(t):
             return team_colors[t]
     
-    # 2. Use Unique Persistent Player Color
+    # 2. Use Unique Persistent Player Color (for all modes)
     if player not in st.session_state.player_colors:
         current_index = len(st.session_state.player_colors) % len(PLAYER_FALLBACKS)
         st.session_state.player_colors[player] = PLAYER_FALLBACKS[current_index]
@@ -538,10 +538,11 @@ def generate_round_robin_schedule(players: List[str]) -> List[Tuple[str, str]]:
     """Generates a list of all unique match-ups (Player A vs Player B)."""
     matches = []
     # If odd number of players, add a 'BYE' placeholder
-    if len(players) % 2 != 0:
-        players = players + ['BYE']
+    current_players = players.copy()
+    if len(current_players) % 2 != 0:
+        current_players = current_players + ['BYE']
     
-    n = len(players)
+    n = len(current_players)
     rounds = n - 1 # Total rounds to be played
     
     # Check if schedule exists in state and is valid for current players
@@ -550,7 +551,7 @@ def generate_round_robin_schedule(players: List[str]) -> List[Tuple[str, str]]:
         
         # Implementation of the circle method for scheduling
         matchups = []
-        p = players.copy()
+        p = current_players.copy()
         
         for _ in range(rounds):
             half = n // 2
@@ -623,13 +624,12 @@ def show_round_robin_page(players: List[str]):
     for i, (p1, p2) in enumerate(schedule, start=1):
         match_id = f"{p1}|{p2}"
         
-        # Determine the color-coded labels for the radio buttons
-        p1_color = get_player_color(p1, {}, {}) # Teams dict is empty/ignored here
+        # --- FIX: RENDER MATCH TITLE WITH HTML USING MARKDOWN ---
+        p1_color = get_player_color(p1, {}, {})
         p2_color = get_player_color(p2, {}, {})
         
         p1_html = f'<span style="color:{p1_color}; font-weight: bold;">{p1}</span>'
         p2_html = f'<span style="color:{p2_color}; font-weight: bold;">{p2}</span>'
-        undecided_html = '(Undecided)'
         
         # Use existing winner or default to (Undecided)
         default_winner = st.session_state.rr_results.get(match_id, "(Undecided)")
@@ -642,18 +642,10 @@ def show_round_robin_page(players: List[str]):
             default_index = 2
 
         with cols[i % len(cols)]:
-            st.markdown(f"**Match {i}:** {p1_html} vs {p2_html}")
+            # Render the title as HTML using st.markdown
+            st.markdown(f"**Match {i}:** {p1_html} vs {p2_html}", unsafe_allow_html=True)
             
-            # Use the HTML for the options in the radio, but store the plain name
-            radio_options = {
-                p1_html: p1,
-                p2_html: p2,
-                undecided_html: "(Undecided)"
-            }
-
-            # Streamlit radio doesn't easily support HTML options that return the original value.
-            # We'll use the plain names in the radio and then render the match title separately.
-            
+            # Use plain names for the radio options, which Streamlit handles correctly
             winner = st.radio(
                 f"Winner (Match {i})",
                 options=options,
@@ -676,12 +668,10 @@ def show_round_robin_page(players: List[str]):
     if not records_df.empty:
         # Add color column for display
         records_df.reset_index(names=['Player'], inplace=True)
-        records_df['Color'] = records_df['Player'].apply(lambda p: get_player_color(p, {}, {}))
         
         records_df["Win Rate"] = records_df.apply(lambda row: row['Wins'] / (row['Wins'] + row['Losses']) if (row['Wins'] + row['Losses']) > 0 else 0, axis=1)
         records_df.sort_values(by=['Wins', 'Losses', 'Player'], ascending=[False, True, True], inplace=True)
         records_df.index = records_df.index + 1 # Start index at 1
-        records_df.drop(columns=['Color'], inplace=True) # Dropped Color because ProgressColumn uses its own color scheme
         
         st.dataframe(
             records_df, 
